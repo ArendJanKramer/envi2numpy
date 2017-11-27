@@ -1,0 +1,15 @@
+INIReader.cpp
+INIReader.h
+MANIFEST.in
+cnpy.cpp
+cnpy.h
+envi_parser.cpp
+envi_parser.h
+ini.c
+ini.h
+pythonwrapper.cpp
+setup.py
+envi2numpy.egg-info/PKG-INFO
+envi2numpy.egg-info/SOURCES.txt
+envi2numpy.egg-info/dependency_links.txt
+envi2numpy.egg-info/top_level.txt

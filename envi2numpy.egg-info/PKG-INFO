@@ -1,0 +1,11 @@
+Metadata-Version: 1.0
+Name: envi2numpy
+Version: 1.1
+Summary: Package used for reading hyperspectral captures
+Home-page: https://github.com/ArendJanKramer/envi2numpy
+Author: Arend Jan Kramer
+Author-email: github@arendjan.eu
+License: MIT
+Description-Content-Type: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
