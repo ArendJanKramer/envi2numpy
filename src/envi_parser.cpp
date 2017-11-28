@@ -200,6 +200,50 @@ bool envi_parser::processNormalizedCapture(const string &cubepath, const string 
             }
 
             cnpy::npy_save(std::move(destinationpath), &normalized[0], {bands - 1lu, cubeHeight, width}, "w");
+
+        } else {
+            printf(" -> Conversion failed, no tiles returned\n\n");
+            return false;
+        }
+
+        printf(" -> Conversion done\n");
+
+        return true;
+
+    } catch (const std::exception &e) {
+        cout << "STD" << e.what();
+    }
+    return false;
+}
+
+bool envi_parser::processLogarithmicDerivativeCapture(const string &cubepath, const string &darkrefpath, const string &whiterefpath, string destinationpath, UInt16 width, UInt16 bands) {
+    try {
+
+        printf(" -> Writing logarithmic derivative numpy array with data...\n");
+
+        float pixelGain = 1.0f;
+
+        UInt16 cubeHeight;
+        typedef float outputType;
+
+        vector<outputType> tiled = makeFloatCube<float>(cubepath, darkrefpath, whiterefpath, width, bands, &cubeHeight, pixelGain);
+
+        if (tiled.size() >= (size_t) (width * cubeHeight * 2lu)) {
+            vector<outputType> normalized(static_cast<unsigned long>(width * cubeHeight * (bands - 1)));
+
+            for (UInt16 b = 0; b < (bands - 1); b++) {
+                unsigned int size = width * cubeHeight;
+                unsigned int offSet = b * size;
+                vector<outputType> bandA(tiled.begin() + offSet, tiled.begin() + offSet + size);
+                vector<outputType> bandB(tiled.begin() + offSet + size, tiled.begin() + offSet + 2 * size);
+                std::transform(bandB.begin(), bandB.end(), bandA.begin(), normalized.begin() + offSet, std::divides<outputType>());
+            }
+
+            std::transform(normalized.begin(), normalized.end(), normalized.begin(), bind2nd(std::minus<outputType>(), 1.0));
+            //std::transform(normalized.begin(), normalized.end(), normalized.begin(),[](outputType x){return x-1.0; });
+
+            cnpy::npy_save(std::move(destinationpath), &normalized[0], {bands - 1lu, cubeHeight, width}, "w");
+
         } else {
             printf(" -> Conversion failed, no tiles returned\n\n");
             return false;

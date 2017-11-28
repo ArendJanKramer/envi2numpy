@@ -4,7 +4,7 @@ from setuptools.extension import Extension
 import os
 
 module1 = Extension('envi2numpy',
-                    sources = ['pythonwrapper.cpp', 'INIReader.cpp','ini.c','cnpy.cpp','envi_parser.cpp'],
+                    sources = ['src/pythonwrapper.cpp', 'src/INIReader.cpp','src/ini.c','src/cnpy.cpp','src/envi_parser.cpp'],
                     include_dirs = [],
 		extra_compile_args=['-std=c++11','-O2'])
 

@@ -45,6 +45,8 @@ public:
 
     bool processNormalizedCapture(const string &cubepath, const string &darkrefpath, const string &whiterefpath, string destinationpath, UInt16 width, UInt16 bands);
 
+    bool processLogarithmicDerivativeCapture(const string &cubepath, const string &darkrefpath, const string &whiterefpath, string destinationpath, UInt16 width, UInt16 bands);
+
 };
 
 
