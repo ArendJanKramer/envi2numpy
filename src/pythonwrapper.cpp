@@ -8,12 +8,15 @@ using namespace std;
 // Python wrappers
 static PyObject *EnviError;
 
-static PyObject *readHDRfile(PyObject *self, PyObject *args) {
+static PyObject *readHDRfile(PyObject *self, PyObject *args, PyObject *keywds) {
 
     const char *hdr_path;
 
-    if (!PyArg_ParseTuple(args, "s", &hdr_path))
+    static char *kwlist[] = {"cube_hdr_path", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "s|i", kwlist,
+                                     &hdr_path))
         return nullptr;
+
 
     INIReader reader(hdr_path);
 
@@ -34,7 +37,7 @@ static PyObject *readHDRfile(PyObject *self, PyObject *args) {
 }
 
 
-static PyObject *convertNumpyObject(PyObject *self, PyObject *args) {
+static PyObject *convertNumpyObject(PyObject *self, PyObject *args, PyObject *keywds) {
     const char *cube_path;
     const char *darkref_path;
     const char *whiteref_path;
@@ -46,8 +49,11 @@ static PyObject *convertNumpyObject(PyObject *self, PyObject *args) {
 
     EnviParser envi_parser;
 
-    if (!PyArg_ParseTuple(args, "s|s|s|i|i|i|i|i", &cube_path, &darkref_path, &whiteref_path, &width, &_numbands,
-                          &normalize, &derive))
+    static char *kwlist[] = {"cube_path", "dark_ref_path", "white_ref_path", "width", "num_bands", "normalize",
+                             "log_derive", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "sssiiii|i", kwlist,
+                                     &cube_path, &darkref_path, &whiteref_path, &width, &_numbands,
+                                     &normalize, &derive))
         return nullptr;
 
     UInt16 cube_height;
@@ -76,17 +82,18 @@ static PyObject *convertNumpyObject(PyObject *self, PyObject *args) {
     return nullptr;
 }
 
-
-static PyObject *PyConvertNumpyObject(PyObject *self, PyObject *args) {
-    return convertNumpyObject(self, args);
-}
-
-
 static PyMethodDef envi2numpyMethods[] =
         {
-                {"convert",     PyConvertNumpyObject, METH_VARARGS, "Convert a capture and return numpy array."},
-                {"readHDRfile", readHDRfile,          METH_VARARGS, "Read properties from HDR file."},
-                {nullptr,       nullptr, 0,                         nullptr}
+                {"convert",     (PyCFunction) convertNumpyObject, METH_VARARGS | METH_KEYWORDS,
+                        "convert(cube_path: str, dark_ref_path: str, white_ref_path: str, width: int, num_bands: int,\n"
+                        "                normalize: bool = False, log_derive: bool = False) -> np.ndarray"
+                        "\n--\n"
+                        "Convert a capture given the paths and return numpy array."},
+                {"readHDRfile", (PyCFunction) readHDRfile,        METH_VARARGS | METH_KEYWORDS,
+                        "readHDRfile(cube_hdr_path: str) -> dict"
+                        "\n--\n"
+                        "Read properties from HDR file."},
+                {nullptr,       nullptr, 0, "nullptr"}
         };
 
 static struct PyModuleDef envi2numpyDefs = {
