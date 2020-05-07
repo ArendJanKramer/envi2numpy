@@ -113,7 +113,7 @@ size_t EnviParser::readRawENVI(vector<TIdx> &dst, string &filename, TIdx width, 
     if (size % (width * bands) != 0) {
         char buff[255];
         snprintf(buff, sizeof(buff), "Cannot deduce height from file size. "
-                                     "Size = %lu is not a multiple of (Width = %d x Bands = %d)\n", size, width, bands);
+                                     "Size = %lu is not a multiple of (Width = %d * Bands = %d)\n", size, width, bands);
         printf("%s", buff);
         throw std::runtime_error(buff);
     }
