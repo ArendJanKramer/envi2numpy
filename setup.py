@@ -9,7 +9,7 @@ module1 = Extension('envi2numpy',
 		extra_compile_args=['-std=c++11','-O2'])
 
 setup (name = 'envi2numpy',
-       version = '1.1',
+       version = '1.2',
        description = 'Package used for reading hyperspectral captures',
        ext_modules = [module1],
 
