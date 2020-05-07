@@ -3,8 +3,8 @@ INIReader.cpp
 INIReader.h
 cnpy.cpp
 cnpy.h
-envi_parser.cpp
-envi_parser.h
+EnviParser.cpp
+EnviParser.h
 ini.c
 ini.h
 pythonwrapper.cpp

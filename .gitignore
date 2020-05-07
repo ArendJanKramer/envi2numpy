@@ -34,3 +34,4 @@
 .idea/
 cmake-build-debug/
 dist/
+envi2numpy.egg-info/

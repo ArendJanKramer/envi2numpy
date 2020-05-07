@@ -18,15 +18,16 @@
 using namespace std;
 typedef unsigned short UInt16;
 
-class envi_parser {
+class EnviParser {
 
 public:
-    enum enviLayout {
+    enum EnviLayout {
         elBandSequential, elBandInterleaveByLine, elBandInterleaveByPixel
     };
 
     template<typename TIdx>
-    vector<TIdx> makeFloatCube(string cubepath, string darkrefpath, string whiterefpath, UInt16 width, UInt16 bands, UInt16 *cubeHeight, TIdx pixelGain);
+    vector<TIdx> makeFloatCube(string cubepath, string darkrefpath, string whiterefpath, UInt16 width, UInt16 bands,
+                               UInt16 *cubeHeight, TIdx pixelGain);
 
     template<typename TIdx>
     size_t readRawENVI(vector<TIdx> &dst, string &filename, TIdx width, TIdx bands);
@@ -36,14 +37,15 @@ public:
 
     template<typename TIdx>
     void normalizeENVI(vector<TIdx> &cube, const vector<TIdx> &black, const vector<TIdx> &white, TIdx bands,
-                       enviLayout cubeLayout, TIdx cubeCols, TIdx cubeRows, TIdx whiteHeight, TIdx blackHeight);
+                       EnviLayout cubeLayout, TIdx cubeCols, TIdx cubeRows, TIdx whiteHeight, TIdx blackHeight);
 
     template<typename TIdx>
     vector<TIdx> BILToTiled(vector<TIdx> bil, UInt16 tileWidth, UInt16 tileHeight, UInt16 bandCount);
 
-    bool processCapture(const string &cubepath, const string &darkrefpath, const string &whiterefpath, string destinationpath, UInt16 width, UInt16 bands, float pixelGain);
-
-    bool processNormalizedCapture(const string &cubepath, const string &darkrefpath, const string &whiterefpath, string destinationpath, UInt16 width, UInt16 bands);
+    vector<float>
+    convertCaptureVectorFloat(const string &cubepath, const string &darkrefpath, const string &whiterefpath,
+                              UInt16 width, UInt16 *numBands, UInt16 *cubeHeight, float pixelGain, bool normalize,
+                              bool log_derive);
 
 };
 

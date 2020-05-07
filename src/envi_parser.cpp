@@ -6,7 +6,9 @@ inline bool fileExists(const std::string &name) {
 }
 
 template<typename TIdx>
-vector<TIdx> envi_parser::makeFloatCube(string cubepath, string darkrefpath, string whiterefpath, UInt16 width, UInt16 bands, UInt16 *cubeHeight, TIdx pixelGain) {
+vector<TIdx>
+EnviParser::makeFloatCube(string cubepath, string darkrefpath, string whiterefpath, UInt16 width, UInt16 bands,
+                          UInt16 *cubeHeight, TIdx pixelGain) {
 
     if (!fileExists(cubepath)) {
         printf("Can't find the cube file. Make sure you point at the correct location.\n");
@@ -41,7 +43,7 @@ vector<TIdx> envi_parser::makeFloatCube(string cubepath, string darkrefpath, str
     vector<TIdx> whiterefd(whiteref.begin(), whiteref.end());
 
     // Normalize image cube with dark ref and white ref
-    normalizeENVI(imaged, darkrefd, whiterefd, (TIdx) bands, envi_parser::elBandInterleaveByLine,
+    normalizeENVI(imaged, darkrefd, whiterefd, (TIdx) bands, EnviParser::elBandInterleaveByLine,
                   (TIdx) width, (TIdx) _cubeHeight, (TIdx) whiteHeight, (TIdx) blackHeight);
 
 
@@ -55,7 +57,7 @@ vector<TIdx> envi_parser::makeFloatCube(string cubepath, string darkrefpath, str
 }
 
 template<typename TIdx>
-vector<TIdx> envi_parser::BILToTiled(vector<TIdx> bil, UInt16 tileWidth, UInt16 tileHeight, UInt16 bandCount) {
+vector<TIdx> EnviParser::BILToTiled(vector<TIdx> bil, UInt16 tileWidth, UInt16 tileHeight, UInt16 bandCount) {
 
     if ((size_t) bil.size() % (size_t) (bandCount * tileWidth * tileHeight) != 0)
         throw std::runtime_error("Source image height is not dividable by the number of bands.");
@@ -78,7 +80,7 @@ vector<TIdx> envi_parser::BILToTiled(vector<TIdx> bil, UInt16 tileWidth, UInt16 
 }
 
 template<typename T>
-size_t inline envi_parser::readToVector(const string &filename, vector<T> &buf) {
+size_t inline EnviParser::readToVector(const string &filename, vector<T> &buf) {
     std::ifstream ifs(filename, ios::binary);
     if (!ifs) throw std::runtime_error("Cannot open file: " + filename);
     ifs.seekg(0, std::ios::end);
@@ -92,20 +94,26 @@ size_t inline envi_parser::readToVector(const string &filename, vector<T> &buf) 
 }
 
 template<typename TIdx>
-size_t envi_parser::readRawENVI(vector<TIdx> &dst, string &filename, TIdx width, TIdx bands) {
+size_t EnviParser::readRawENVI(vector<TIdx> &dst, string &filename, TIdx width, TIdx bands) {
     vector<TIdx> buf;
     auto size = (size_t) readToVector(filename, buf);
 
-    if (size % (width * bands) != 0)
-        throw std::runtime_error("Cannot deduce height form file size : %s");
+    if (size % (width * bands) != 0) {
+        char buff[255];
+        snprintf(buff, sizeof(buff), "Cannot deduce height form file size for %s. "
+                                     "Width = %d, Bands = %d, Size = %lu\n", filename.c_str(), width, bands, size);
+        printf("%s", buff);
+        throw std::runtime_error("");
+    }
 
     dst = buf;
     return size;
 }
 
 template<typename TIdx>
-void envi_parser::normalizeENVI(vector<TIdx> &cube, const vector<TIdx> &black, const vector<TIdx> &white, TIdx bands,
-                                enviLayout cubeLayout, TIdx cubeCols, TIdx cubeRows, TIdx whiteHeight, TIdx blackHeight) {
+void EnviParser::normalizeENVI(vector<TIdx> &cube, const vector<TIdx> &black, const vector<TIdx> &white, TIdx bands,
+                               EnviLayout cubeLayout, TIdx cubeCols, TIdx cubeRows, TIdx whiteHeight,
+                               TIdx blackHeight) {
     if (cubeLayout != elBandInterleaveByLine)
         throw std::runtime_error("Specified cubeLayout not supported");
 
@@ -150,67 +158,51 @@ void envi_parser::normalizeENVI(vector<TIdx> &cube, const vector<TIdx> &black, c
     }
 }
 
-// Process a capture
-bool envi_parser::processCapture(const string &cubepath, const string &darkrefpath, const string &whiterefpath, string destinationpath, UInt16 width, UInt16 bands, float pixelGain) {
-    try {
+vector<float>
+EnviParser::convertCaptureVectorFloat(const string &cubepath, const string &darkrefpath, const string &whiterefpath,
+                                      UInt16 width, UInt16 *numBands, UInt16 *cubeHeight, float pixelGain,
+                                      bool normalize, bool log_derive) {
+    // Everything is templated. Change this to easily switch output type
+    typedef float outputType;
 
-        printf(" -> Writing numpy array with data...\n");
-
-        UInt16 cubeHeight;
-        vector<float> tiled = makeFloatCube<float>(cubepath, darkrefpath, whiterefpath, width, bands, &cubeHeight, pixelGain);
-
-        if (tiled.empty()) {
-            printf(" -> Conversion failed, no tiles returned\n\n");
-            return false;
-        }
-
-        cnpy::npy_save(std::move(destinationpath), &tiled[0], {bands, cubeHeight, width}, "w");
-
-        printf(" -> Conversion done\n");
-        return true;
-
-    } catch (const std::exception &e) {
-        cout << "STD" << e.what();
+    if (normalize || log_derive) {
+        pixelGain = 1.0;
     }
-    return false;
-}
 
-// Process a capture
-bool envi_parser::processNormalizedCapture(const string &cubepath, const string &darkrefpath, const string &whiterefpath, string destinationpath, UInt16 width, UInt16 bands) {
-    try {
+    auto cube = makeFloatCube<outputType>(cubepath, darkrefpath, whiterefpath, width, *numBands, cubeHeight, pixelGain);
 
-        printf(" -> Writing normalized numpy array with data...\n");
+    if (normalize) {
+        float min = *min_element(cube.begin(), cube.end());
+        float max = *max_element(cube.begin(), cube.end());
+        std::transform(cube.begin(), cube.end(), cube.begin(), bind2nd(std::minus<float>(), min));
+        std::transform(cube.begin(), cube.end(), cube.begin(), bind2nd(std::divides<float>(), max));
+    }
 
-        float pixelGain = 1.0f;
+    if (log_derive) {
+        // Check for at least two bands
+        if (cube.size() >= (size_t) (width * (*cubeHeight) * 2lu)) {
+            vector<outputType> normalized(static_cast<unsigned long>(width * (*cubeHeight) * (*numBands - 1)));
 
-        UInt16 cubeHeight;
-        typedef float outputType;
-
-        vector<outputType> tiled = makeFloatCube<float>(cubepath, darkrefpath, whiterefpath, width, bands, &cubeHeight, pixelGain);
-
-        if (tiled.size() >= (size_t) (width * cubeHeight * 2lu)) {
-            vector<outputType> normalized(static_cast<unsigned long>(width * cubeHeight * (bands - 1)));
-
-            for (UInt16 b = 0; b < (bands - 1); b++) {
-                unsigned int size = width * cubeHeight;
+            for (UInt16 b = 0; b < (*numBands - 1); b++) {
+                unsigned int size = width * (*cubeHeight);
                 unsigned int offSet = b * size;
-                vector<outputType> bandA(tiled.begin() + offSet, tiled.begin() + offSet + size);
-                vector<outputType> bandB(tiled.begin() + offSet + size, tiled.begin() + offSet + 2 * size);
-                std::transform(bandB.begin(), bandB.end(), bandA.begin(), normalized.begin() + offSet, std::divides<outputType>());
+                vector<outputType> bandA(cube.begin() + offSet, cube.begin() + offSet + size);
+                vector<outputType> bandB(cube.begin() + offSet + size, cube.begin() + offSet + 2 * size);
+                std::transform(bandB.begin(), bandB.end(), bandA.begin(), normalized.begin() + offSet,
+                               std::divides<outputType>());
             }
 
-            cnpy::npy_save(std::move(destinationpath), &normalized[0], {bands - 1lu, cubeHeight, width}, "w");
-        } else {
-            printf(" -> Conversion failed, no tiles returned\n\n");
-            return false;
+            std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+                           bind2nd(std::minus<outputType>(), 1.0));
+            *numBands = *numBands - 1;
+            //std::transform(normalized.begin(), normalized.end(), normalized.begin(),[](outputType x){return x-1.0; });
+            return normalized;
         }
-
-        printf(" -> Conversion done\n");
-
-        return true;
-
-    } catch (const std::exception &e) {
-        cout << "STD" << e.what();
     }
-    return false;
+
+
+    return cube;
 }
+
+
+

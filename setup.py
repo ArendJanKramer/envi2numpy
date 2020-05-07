@@ -4,8 +4,8 @@ from setuptools.extension import Extension
 import os
 
 module1 = Extension('envi2numpy',
-                    sources = ['pythonwrapper.cpp', 'INIReader.cpp','ini.c','cnpy.cpp','envi_parser.cpp'],
-                    include_dirs = [],
+                    sources = ['src/pythonwrapper.cpp', 'src/INIReader.cpp','src/ini.c','src/cnpy.cpp','src/envi_parser.cpp','src/numpy_helpers.cpp'],
+                    include_dirs = ['src','/home/arendjan/miniconda3/envs/arendjan/lib/python3.6/site-packages/numpy/core/include/'],
 		extra_compile_args=['-std=c++11','-O2'])
 
 setup (name = 'envi2numpy',
