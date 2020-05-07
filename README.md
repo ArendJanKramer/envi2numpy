@@ -1,6 +1,7 @@
 # envi2numpy - Converting ENVI shots to numpy
 
-Python module for converting ENVI captures to numpy arrays. It can also do white/dark balancing.
+Python module for converting hyperspectral ENVI captures to numpy arrays. 
+It can also do white/dark balancing.
 
 To install:
 
@@ -32,8 +33,8 @@ Suppose the following files:
 import envi2numpy
 
 # Settings
-do_normalize = False
-do_log_derive = False
+do_normalize = False # Normalize pixel values between 0.0 and 1.0
+do_log_derive = False # Take the logarithmic derivative between the bands
 
 # Parse meta info
 hdr_dict = envi2numpy.readHDRfile("EXAMPLE_2020-01-01-10-10-10.hdr")

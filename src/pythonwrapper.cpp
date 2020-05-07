@@ -69,8 +69,9 @@ static PyObject *convertNumpyObject(PyObject *self, PyObject *args) {
         return numpy_array;
 
     } catch (const runtime_error &error) {
-        printf("Failed to convert to numpy error %s \n", error.what());
-        PyErr_SetString(EnviError, "Could not convert binaries into a valid numpy array");
+        char buff[1024];
+        snprintf(buff, sizeof(buff), "Failed to convert to numpy with error: `%s` \n", error.what());
+        PyErr_SetString(EnviError, buff);
     }
     return nullptr;
 }

@@ -5,6 +5,18 @@ inline bool fileExists(const std::string &name) {
     return f.good();
 }
 
+string getBaseName(const string &s) {
+    char sep = '/';
+#ifdef _WIN32
+    sep = '\\';
+#endif
+    size_t i = s.rfind(sep, s.length());
+    if (i != string::npos) {
+        return (s.substr(i + 1, s.length() - i));
+    }
+    return ("");
+}
+
 template<typename TIdx>
 vector<TIdx>
 EnviParser::makeFloatCube(string cubepath, string darkrefpath, string whiterefpath, UInt16 width, UInt16 bands,
@@ -100,10 +112,10 @@ size_t EnviParser::readRawENVI(vector<TIdx> &dst, string &filename, TIdx width, 
 
     if (size % (width * bands) != 0) {
         char buff[255];
-        snprintf(buff, sizeof(buff), "Cannot deduce height form file size for %s. "
-                                     "Width = %d, Bands = %d, Size = %lu\n", filename.c_str(), width, bands, size);
+        snprintf(buff, sizeof(buff), "Cannot deduce height from file size. "
+                                     "Size = %lu is not a multiple of (Width = %d x Bands = %d)\n", size, width, bands);
         printf("%s", buff);
-        throw std::runtime_error("");
+        throw std::runtime_error(buff);
     }
 
     dst = buf;
