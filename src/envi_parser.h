@@ -47,6 +47,8 @@ public:
                               UInt16 width, UInt16 *numBands, UInt16 *cubeHeight, float pixelGain, bool normalize,
                               bool log_derive);
 
+    bool processLogarithmicDerivativeCapture(const string &cubepath, const string &darkrefpath, const string &whiterefpath, string destinationpath, UInt16 width, UInt16 bands);
+
 };
 
 
