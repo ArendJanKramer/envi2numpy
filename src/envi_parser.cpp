@@ -21,43 +21,51 @@ template<typename TIdx>
 vector<TIdx>
 EnviParser::makeFloatCube(string cubepath, string darkrefpath, string whiterefpath, UInt16 width, UInt16 bands,
                           UInt16 *cubeHeight, TIdx pixelGain) {
-
     if (!fileExists(cubepath)) {
         printf("Can't find the cube file. Make sure you point at the correct location.\n");
         return vector<TIdx>();
     }
-    if (!fileExists(darkrefpath)) {
-        printf("Can't find the dark reference file. Make sure you point at the correct location.\n");
-        return vector<TIdx>();
+    bool normalize_with_ref_files = !darkrefpath.empty() && !whiterefpath.empty();
+    if (!darkrefpath.empty() && !fileExists(darkrefpath)) {
+        printf("Can't find the dark reference file. Make sure you point at the correct location. "
+               "Skipping dark and white correction.\n");
+        normalize_with_ref_files = false;
     }
-    if (!fileExists(whiterefpath)) {
-        printf("Can't find the white reference file. Make sure you point at the correct location.\n");
-        return vector<TIdx>();
+    if (!whiterefpath.empty() && !fileExists(whiterefpath)) {
+        printf("Can't find the white reference file. Make sure you point at the correct location."
+               "Skipping dark and white correction.\n");
+        normalize_with_ref_files = false;
     }
 
     // Setup matrices
     vector<UInt16> image;
-    vector<UInt16> darkref;
-    vector<UInt16> whiteref;
 
     // Read files into 3d arrays
     size_t imageSize = readRawENVI(image, cubepath, width, bands);
-    size_t darkSize = readRawENVI(darkref, darkrefpath, width, bands);
-    size_t whiteSize = readRawENVI(whiteref, whiterefpath, width, bands);
 
     auto _cubeHeight = static_cast<UInt16>(imageSize / (bands * width));
-    auto blackHeight = static_cast<UInt16>(darkSize / (bands * width));
-    auto whiteHeight = static_cast<UInt16>(whiteSize / (bands * width));
 
     *cubeHeight = _cubeHeight;
     vector<TIdx> imaged(image.begin(), image.end());
-    vector<TIdx> darkrefd(darkref.begin(), darkref.end());
-    vector<TIdx> whiterefd(whiteref.begin(), whiteref.end());
 
     // Normalize image cube with dark ref and white ref
-    normalizeENVI(imaged, darkrefd, whiterefd, (TIdx) bands, EnviParser::elBandInterleaveByLine,
-                  (TIdx) width, (TIdx) _cubeHeight, (TIdx) whiteHeight, (TIdx) blackHeight);
+    if (normalize_with_ref_files) {
+        // Setup matrices
+        vector<UInt16> darkref;
+        vector<UInt16> whiteref;
 
+        size_t darkSize = readRawENVI(darkref, darkrefpath, width, bands);
+        size_t whiteSize = readRawENVI(whiteref, whiterefpath, width, bands);
+
+        auto blackHeight = static_cast<UInt16>(darkSize / (bands * width));
+        auto whiteHeight = static_cast<UInt16>(whiteSize / (bands * width));
+
+        vector<TIdx> darkrefd(darkref.begin(), darkref.end());
+        vector<TIdx> whiterefd(whiteref.begin(), whiteref.end());
+
+        normalizeENVI(imaged, darkrefd, whiterefd, (TIdx) bands, EnviParser::elBandInterleaveByLine,
+                      (TIdx) width, (TIdx) _cubeHeight, (TIdx) whiteHeight, (TIdx) blackHeight);
+    }
 
     if (pixelGain != 1.0f)
         std::transform(imaged.begin(), imaged.end(), imaged.begin(), std::bind1st(std::multiplies<TIdx>(), pixelGain));
@@ -70,8 +78,8 @@ EnviParser::makeFloatCube(string cubepath, string darkrefpath, string whiterefpa
 
 template<typename TIdx>
 vector<TIdx> EnviParser::BILToTiled(vector<TIdx> bil, UInt16 tileWidth, UInt16 tileHeight, UInt16 bandCount) {
-
-    if ((size_t) bil.size() % (size_t) (bandCount * tileWidth * tileHeight) != 0)
+    auto sufficient = int(bil.size() >= (bandCount * tileWidth * tileHeight));
+    if (!sufficient)
         throw std::runtime_error("Source image height is not dividable by the number of bands.");
 
     vector<TIdx> tiled(tileWidth * tileHeight * bandCount);
@@ -109,15 +117,19 @@ template<typename TIdx>
 size_t EnviParser::readRawENVI(vector<TIdx> &dst, string &filename, TIdx width, TIdx bands) {
     vector<TIdx> buf;
     auto size = (size_t) readToVector(filename, buf);
-
-    if (size % (width * bands) != 0) {
+    auto sufficient = bool(size > (width * bands));
+    auto rest = size_t(size % (width * bands));
+    if (!sufficient) {
         char buff[255];
-        snprintf(buff, sizeof(buff), "Cannot deduce height from file size. "
-                                     "Size = %lu is not a multiple of (Width = %d * Bands = %d)\n", size, width, bands);
+        snprintf(buff, sizeof(buff), "Cannot deduce height from file %s. "
+                                     "Size = %lu is not a multiple of (Width = %d * Bands = %d)\n",
+                 getBaseName(filename).c_str(), size, width, bands);
         printf("%s", buff);
         throw std::runtime_error(buff);
     }
-
+    // Trim end to fit (width * height * bands perfectly)
+    for (int i = 0; i < rest; i++)
+        buf.pop_back();
     dst = buf;
     return size;
 }
@@ -215,6 +227,3 @@ EnviParser::convertCaptureVectorFloat(const string &cubepath, const string &dark
 
     return cube;
 }
-
-
-

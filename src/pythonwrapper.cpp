@@ -39,32 +39,36 @@ static PyObject *readHDRfile(PyObject *self, PyObject *args, PyObject *keywds) {
 
 static PyObject *convertNumpyObject(PyObject *self, PyObject *args, PyObject *keywds) {
     const char *cube_path;
-    const char *darkref_path;
-    const char *whiteref_path;
+    const char *darkref_path = nullptr;
+    const char *whiteref_path = nullptr;
     int width;
     int _numbands;
 
-    bool normalize;
-    bool derive;
+    bool normalize = false;
+    bool derive = true;
 
     EnviParser envi_parser;
 
-    static char *kwlist[] = {"cube_path", "dark_ref_path", "white_ref_path", "width", "num_bands", "normalize",
+    static char *kwlist[] = {"cube_path", "width", "num_bands", "dark_ref_path", "white_ref_path", "normalize",
                              "log_derive", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, keywds, "sssiiii|i", kwlist,
-                                     &cube_path, &darkref_path, &whiteref_path, &width, &_numbands,
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "sii|zzii|i", kwlist,
+                                     &cube_path, &width, &_numbands, &darkref_path, &whiteref_path,
                                      &normalize, &derive))
         return nullptr;
 
     UInt16 cube_height;
     auto num_bands = (UInt16) _numbands;
 
+    if (whiteref_path == nullptr)
+        whiteref_path = "";
+    if (darkref_path == nullptr)
+        darkref_path = "";
+
     try {
         auto vector = envi_parser.convertCaptureVectorFloat(string(cube_path), string(darkref_path),
                                                             string(whiteref_path),
                                                             (UInt16) width, &num_bands, &cube_height, 1.0, normalize,
                                                             derive);
-
         auto numpy_array = image_to_ndarray(vector, num_bands, cube_height, width, NPY_FLOAT32);
         if (numpy_array == nullptr) {
             printf("Failed to convert to numpy with vector %lu \n", vector.size());
@@ -85,7 +89,8 @@ static PyObject *convertNumpyObject(PyObject *self, PyObject *args, PyObject *ke
 static PyMethodDef envi2numpyMethods[] =
         {
                 {"convert",     (PyCFunction) convertNumpyObject, METH_VARARGS | METH_KEYWORDS,
-                        "convert(cube_path: str, dark_ref_path: str, white_ref_path: str, width: int, num_bands: int,\n"
+                        "convert(cube_path: str, width: int, num_bands: int, dark_ref_path: Optional[str] = None, \n"
+                        "                white_ref_path: Optional[str] = None,\n"
                         "                normalize: bool = False, log_derive: bool = False) -> np.ndarray"
                         "\n--\n"
                         "Convert a capture given the paths and return numpy array."},

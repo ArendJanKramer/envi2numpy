@@ -16,7 +16,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(name='envi2numpy',
-      version='1.3',
+      version='1.4',
       description='Package used for reading and converting hyperspectral ENVI captures to numpy',
       long_description=long_description,
       long_description_content_type='text/markdown',
